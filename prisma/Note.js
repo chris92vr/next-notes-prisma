@@ -24,3 +24,21 @@ export const createNote = async (title, body, session) => {
   const note = await getNoteByID(newNote.id);
   return note;
 };
+
+// UPDATE
+export const updateNote = async (id, updatedData, session) => {
+  let userId = session?.user.id;
+  const updatedNote = await prisma.note.update({
+    where: {
+      id_userId: {
+        id,
+        userId,
+      },
+    },
+    data: {
+      ...updatedData,
+    },
+  });
+  const note = await getNoteByID(updatedNote.id);
+  return note;
+};
