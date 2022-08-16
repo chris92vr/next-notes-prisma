@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { useSession } from 'next-auth/react';
+
 import { CheckCircleIcon } from '@heroicons/react/solid';
 
 import {
@@ -12,6 +14,9 @@ import {
 import RandomID from '../modules/RandomID';
 
 const Editor = () => {
+  // useSession() returns an object containing two values: data and status
+  const { data: session, status } = useSession();
+
   // the current note
   const currentNote = useNote();
   const setCurrentNote = useDispatchNote();
@@ -29,6 +34,9 @@ and the name of the ship was the billy old tea`
   const [noteID, setNoteID] = useState(null);
   const [noteAction, setNoteAction] = useState('add');
   const [isSaved, setIsSaved] = useState(false);
+
+  // user data
+  const [userID, setUserID] = useState(null);
 
   // function to update textarea content and height
   const updateField = (e) => {
@@ -57,27 +65,57 @@ and the name of the ship was the billy old tea`
   };
 
   // function to save note to saved notes array
-  const saveNote = () => {
+  const saveNote = async () => {
     if (title && body) {
       // check if note already has an ID, if it does asign the current id to the note object,
       // if not, assign a new random ID to the note object
-      let id = noteID || RandomID(title.slice(0, 5), 5);
+      // let id = noteID || RandomID(title.slice(0, 5), 5);
+      // let id = noteID;
+
+      // set userId
+      setUserID(session.user.id);
 
       // the note object
       let note = {
-        id,
+        // id,
         title,
         body,
+        userId: userID,
       };
+
+      console.log({ note });
 
       try {
         if (noteAction == 'edit') {
+          // add note id to note data
+          note.id = noteID;
+
+          // send request to edit note
+          let res = await fetch('/api/note', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(note),
+          });
+
+          // update note
+          const updatedNote = await res.json();
+          console.log('Update successful', { updatedNote });
+
           // edit in notes list
-          setNotes({ note, type: 'edit' });
+          setNotes({ note: updatedNote, type: 'edit' });
           console.log({ note, noteAction, noteID, notes });
         } else {
+          // send create request with note data
+          let res = await fetch('/api/note', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(note),
+          });
+
+          const newNote = await res.json();
+          console.log('Create successful', { newNote });
           // add to notes list
-          setNotes({ note, type: 'add' });
+          setNotes({ note: newNote, type: 'add' });
         }
 
         // change isSaved state to true, thereby disabling the save button
@@ -97,7 +135,7 @@ and the name of the ship was the billy old tea`
         setNoteID(null);
         setNoteAction('add');
       } catch (error) {
-        console.log({ error });
+        console.log(error);
       }
     }
   };
@@ -121,45 +159,47 @@ and the name of the ship was the billy old tea`
   }, [currentNote]);
 
   return (
-    <div className={'editor'}>
-      <div className={'wrapper'}>
-        <div className="editing-area">
-          <div className="title">
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              type="text"
-              className={'form-input'}
-              placeholder="Title"
-            />
+    status === 'authenticated' && (
+      <div className={'editor'}>
+        <div className={'wrapper'}>
+          <div className="editing-area">
+            <div className="title">
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                type="text"
+                className={'form-input'}
+                placeholder="Title"
+              />
+            </div>
+            <div className="body">
+              <textarea
+                value={body}
+                onChange={(e) => updateField(e)}
+                name="note-body"
+                id="note-body"
+                className="form-textarea"
+                cols="10"
+                rows="2"
+                placeholder="Write something spec ✨"
+              ></textarea>
+            </div>
           </div>
-          <div className="body">
-            <textarea
-              value={body}
-              onChange={(e) => updateField(e)}
-              name="note-body"
-              id="note-body"
-              className="form-textarea"
-              cols="10"
-              rows="2"
-              placeholder="Write something spec ✨"
-            ></textarea>
-          </div>
+          <ul className={'options'}>
+            <li className={'option'}>
+              <button
+                onClick={saveNote}
+                disabled={isSaved}
+                className="cta flex gap-2 items-end"
+              >
+                <CheckCircleIcon className="h-5 w-5 text-blue-500" />
+                <span className="">{isSaved ? 'Saved' : 'Save'}</span>
+              </button>
+            </li>
+          </ul>
         </div>
-        <ul className={'options'}>
-          <li className={'option'}>
-            <button
-              onClick={saveNote}
-              disabled={isSaved}
-              className="cta flex gap-2 items-end"
-            >
-              <CheckCircleIcon className="h-5 w-5 text-blue-500" />
-              <span className="">{isSaved ? 'Saved' : 'Save'}</span>
-            </button>
-          </li>
-        </ul>
       </div>
-    </div>
+    )
   );
 };
 
