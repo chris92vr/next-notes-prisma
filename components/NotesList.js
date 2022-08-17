@@ -43,17 +43,12 @@ const NotesList = ({ retrieved_notes, showEditor }) => {
       });
       const deletedNote = await res.json();
       confirmDelete ? setNotes({ note: deletedNote, type: 'remove' }) : null;
+      window.location.reload(false);
     } catch (error) {
       console.log(error);
     }
   };
 
-  const removeNote = (note) => {
-    let confirmDelete = confirm('Do you really want to delete this note?');
-    if (confirmDelete) {
-      deleteNote(note);
-    }
-  };
   // function to add note by using the setNotes Dispatch notes function
 
   useEffect(() => {
