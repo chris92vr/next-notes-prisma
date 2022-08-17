@@ -134,6 +134,7 @@ and the name of the ship was the billy old tea`
         // clear note ID & action
         setNoteID(null);
         setNoteAction('add');
+        window.location.reload(false);
       } catch (error) {
         console.log(error);
       }

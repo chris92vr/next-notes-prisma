@@ -1,32 +1,72 @@
-import { useEffect, useState } from "react";
+import { useEffect } from 'react';
+import Image from 'next/image';
 
-import {  PencilAltIcon, TrashIcon, ExternalLinkIcon } from "@heroicons/react/solid";
+import {
+  PencilAltIcon,
+  TrashIcon,
+  ExternalLinkIcon,
+} from '@heroicons/react/solid';
 
-import { useNote, useDispatchNote, useNotes, useDispatchNotes } from "../modules/AppContext";
+import {
+  useNote,
+  useDispatchNote,
+  useNotes,
+  useDispatchNotes,
+} from '../modules/AppContext';
+import Link from 'next/link';
 
-
-const NotesList = ({ showEditor }) => {
+const NotesList = ({ retrieved_notes, showEditor }) => {
+  // this is where we assign the context to constants
+  // which we will use to read and modify our global state
   const notes = useNotes();
   const setNotes = useDispatchNotes();
 
   const currentNote = useNote();
   const setCurrentNote = useDispatchNote();
 
+  // function to edit note by setting it to the currentNote state
+  // and adding the "edit" action which will then be read by the <Editor /> component
   const editNote = (note) => {
-    note.action = "edit";
+    console.log({ note });
+    note.action = 'edit';
     setCurrentNote(note);
   };
 
-  const deleteNote = (note) => {
-    let confirmDelete = confirm("Do you really want to delete this note?");
-    confirmDelete ? setNotes({ note, type: "remove" }) : null;
+  // function to delete note by using the setNotes Dispatch notes function
+  const deleteNote = async (note) => {
+    let confirmDelete = confirm('Do you really want to delete this note?');
+    try {
+      let res = await fetch(`/api/note`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(note),
+      });
+      const deletedNote = await res.json();
+      confirmDelete ? setNotes({ note: deletedNote, type: 'remove' }) : null;
+    } catch (error) {
+      console.log(error);
+    }
   };
+
+  const removeNote = (note) => {
+    let confirmDelete = confirm('Do you really want to delete this note?');
+    if (confirmDelete) {
+      deleteNote(note);
+    }
+  };
+  // function to add note by using the setNotes Dispatch notes function
+
+  useEffect(() => {
+    // replace notes in notes context state
+    setNotes({ note: retrieved_notes, type: 'replace' });
+    console.log('notes:', retrieved_notes);
+  }, [retrieved_notes]);
 
   return (
     <div className="notes">
-      {notes.length > 0 ? (
+      {retrieved_notes.length > 0 ? (
         <ul className="note-list">
-          {notes.map((note) => (
+          {retrieved_notes.map((note) => (
             <li key={note.id} className="note-item">
               <article className="note">
                 <header className="note-header">
@@ -37,6 +77,16 @@ const NotesList = ({ showEditor }) => {
                 </main>
                 <footer className="note-footer">
                   <ul className="options">
+                    <li className="option">
+                      {/* add user image to note footer */}
+                      <Image
+                        src={note.user.image}
+                        alt={note.user.name}
+                        width={32}
+                        height={32}
+                        className="rounded-full"
+                      />
+                    </li>
                     <li onClick={() => editNote(note)} className="option">
                       <button className="cta cta-w-icon">
                         <PencilAltIcon className="icon" />
@@ -44,13 +94,22 @@ const NotesList = ({ showEditor }) => {
                       </button>
                     </li>
                     <li className="option">
-                      <button className="cta cta-w-icon">
-                        <ExternalLinkIcon className="icon" />
-                        <span className="">Open</span>
-                      </button>
+                      <Link
+                        href={`/note/${note.id}`}
+                        target={`_blank`}
+                        rel={`noopener`}
+                      >
+                        <button className="cta cta-w-icon">
+                          <ExternalLinkIcon className="icon" />
+                          <span className="">Open</span>
+                        </button>
+                      </Link>
                     </li>
                     <li className="option">
-                      <button onClick={() => deleteNote(note)} className="cta cta-w-icon">
+                      <button
+                        onClick={() => deleteNote(note)}
+                        className="cta cta-w-icon"
+                      >
                         <TrashIcon className="icon" />
                         <span className="">Delete</span>
                       </button>
